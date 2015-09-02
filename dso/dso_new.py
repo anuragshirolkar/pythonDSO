@@ -9,6 +9,10 @@ class model():
     alpha = []
     m = 0
 
+    '''
+    Reading data from the file and creating data array
+    as well as initialization
+    '''
     def read_data(self):
         datafile = open('../data/a1a.txt')
         mx_feature = 0
@@ -33,10 +37,14 @@ class model():
         print self.m, self.d
         return
 
+    '''
+    iteration <==> 1 epoch
+    '''
     def iterate(self):
         for i in range(self.m):
             for j in range(self.d+1):
                 if j == self.d:
+                    # ignore this
                     self.weight[j] += self.eta*(self.alpha[i]*self.data[i][1][j]/self.m)
                 else:
                     self.weight[j] -= self.eta*(self.lmbd*self.weight[j]/self.m - self.alpha[i]*self.data[i][1][j]/self.m)
@@ -46,6 +54,9 @@ class model():
                     self.alpha[i] += self.eta * (- self.weight[j]*self.data[i][1][j]/self.m)
                     self.alpha[i] = 0
 
+    '''
+    dot product of two vectors a and b
+    '''
     def _dot_product(self, a, b):
         if len(a) != len(b):
             return 0
@@ -54,9 +65,15 @@ class model():
             product += a[i] * b[i]
         return product
 
+    '''
+    squared hinge loss function <=> max(0, 1 - <w.x>*y)
+    '''
     def _squared_hinge(self, w, x, y):
         return max(0, 1 - y*(self._dot_product(w, x)))**2
 
+    '''
+    The P(w) function
+    '''
     def risk(self):
         risk_val = 0
         for i in self.weight:#[:-1]:
@@ -65,6 +82,9 @@ class model():
             risk_val += self._squared_hinge(self.weight, self.data[i][1], self.data[i][0])/self.m
         return risk_val
 
+    '''
+    The f(w, alpha) function on page no 3.
+    '''
     def f_val(self, w, a):
         ans = 0
         for i in range(self.m):
@@ -72,6 +92,9 @@ class model():
                 ans += self.lmbd*w[j]*self.weight[j]/(2*self.m) - a[i]*self.alpha[i]*self.data[i][0]*self.data[i][0]/(4*self.m*(self.d+1)) + a[i]*self.data[i][0]/(self.m*(self.d+1)) - a[i]*w[j]*self.data[i][1][j]/self.m
         return ans
 
+    '''
+    dual gap in convergence analysis on page no 5
+    '''
     def dual_gap(self):
         w1 = []
         for j in range(self.d+1):
@@ -84,6 +107,9 @@ class model():
         print self.f_val(self.weight, a1) , self.f_val(self.weight, self.alpha), self.f_val(w1, self.alpha)
 
 
+'''
+main code
+'''
 mdl = model()
 mdl.read_data()
 print mdl.risk()
