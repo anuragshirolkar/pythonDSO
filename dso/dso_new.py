@@ -21,7 +21,7 @@ class model():
         self.d = mx_feature
         self.m = len(lines)
         self.alpha = [0]*self.m
-        self.weight = [0.1]*(self.d+1)
+        self.weight = [0]*(self.d+1)
         for line in lines:
             x = [0] * (self.d+1)
             x[self.d] = 1
@@ -59,11 +59,30 @@ class model():
 
     def risk(self):
         risk_val = 0
-        for i in self.weight[:-1]:
+        for i in self.weight:#[:-1]:
             risk_val += self.lmbd*i*i/2
         for i in range(self.m):
             risk_val += self._squared_hinge(self.weight, self.data[i][1], self.data[i][0])/self.m
         return risk_val
+
+    def f_val(self, w, a):
+        ans = 0
+        for i in range(self.m):
+            for j in range(self.d+1):
+                ans += self.lmbd*w[j]*self.weight[j]/(2*self.m) - a[i]*self.alpha[i]*self.data[i][0]*self.data[i][0]/(4*self.m*(self.d+1)) + a[i]*self.data[i][0]/(self.m*(self.d+1)) - a[i]*w[j]*self.data[i][1][j]/self.m
+        return ans
+
+    def dual_gap(self):
+        w1 = []
+        for j in range(self.d+1):
+            w1.append(sum([ (self.alpha[i]*self.data[i][1][j]) for i in range(self.m)])/(self.lmbd*self.m))
+        a1 = []
+        for i in range(self.m):
+            a1.append(self.data[i][0] * max(0, 2*(1 - self._dot_product(self.weight, self.data[i][1]))))
+        #print self.weight
+        #print w1
+        print self.f_val(self.weight, a1) , self.f_val(self.weight, self.alpha), self.f_val(w1, self.alpha)
+
 
 mdl = model()
 mdl.read_data()
@@ -76,12 +95,9 @@ for i in range(100):
     #mdl.eta = mdl.eta/(i+2)*(i+1)
     if i% 10 == 0:
         print mdl.risk(), mdl.eta
+        #mdl.dual_gap()
         #print mdl.weight
         #print mdl.alpha[:6]
     #print mdl.alpha
-print risk
-print mdl.weight
-# [0.006887633299861208, 0.014764132297201192, 0.01240469014529335]
-# [0.009355598828895353, 0.01911519415644527, 0.02221181289762343]
-# [0.008866639238918294, 0.013442128550192464, 0.028414838014948193]
-# [-0.002104333821542469, -0.010286502405179206, 0.03340979119748148]
+#print risk
+#print mdl.weight
