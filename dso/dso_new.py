@@ -1,8 +1,11 @@
 __author__ = 'anuragshirolkar'
 
+import random
+import time
+
 class model():
     data = []
-    eta = 0.1
+    eta = 3.0
     lmbd = 0.00001
     d = 2
     weight = [0]*(d+1)
@@ -33,26 +36,51 @@ class model():
                 x[int(feature.split(':')[0]) - 1] = float(feature.split(':')[1])
             y = int(line.split()[0])
             self.data.append((y, x))
-        print self.data
-        print self.m, self.d
+        # print self.data
+        # print self.m, self.d
         return
 
     '''
     iteration <==> 1 epoch
     '''
     def iterate(self):
+        indices = []
         for i in range(self.m):
             for j in range(self.d+1):
-                if j == self.d:
+                indices.append((i,j))
+        random.shuffle(indices)
+        for (i, j) in indices:
+            # print i, j
+            # print self.alpha[0]
+            if j == self.d+1:
+                # ignore this
+                self.weight[j] += self.eta*(self.alpha[i]*self.data[i][1][j]/self.m)
+            else:
+                self.weight[j] -= self.eta/self.m*(self.lmbd*self.weight[j] - self.alpha[i]*self.data[i][1][j])
+            if self.alpha[i] * self.data[i][0] >= 0:
+                # if i == 0:
+                #     print "here", self.eta / (self.m*(self.d+1)), self.weight[j]*self.data[i][1][j]/self.m, (self.data[i][0] - self.alpha[i]/2)/(self.m*(self.d+1)), self.weight[j]*self.data[i][1][j]/self.m
+                self.alpha[i] += self.eta * ((self.data[i][0] - self.alpha[i]/2)*1.0/(self.m*(self.d+1)) - self.weight[j]*self.data[i][1][j]*1.0/self.m)
+                # if i == 0:
+                #     print self.alpha[i]
+            else:
+                self.alpha[i] += self.eta * (- self.weight[j]*self.data[i][1][j]/self.m)
+                self.alpha[i] = 0
+        '''
+        for j in range(self.d+1):
+            for i in range(self.m):
+                if j == self.d+1:
                     # ignore this
                     self.weight[j] += self.eta*(self.alpha[i]*self.data[i][1][j]/self.m)
                 else:
                     self.weight[j] -= self.eta*(self.lmbd*self.weight[j]/self.m - self.alpha[i]*self.data[i][1][j]/self.m)
                 if self.alpha[i] * self.data[i][0] >= 0:
-                    self.alpha[i] += self.eta * ((-self.data[i][0] + self.alpha[i])/(self.m*(self.d+1)) - self.weight[j]*self.data[i][1][j]/self.m)
+                    self.alpha[i] += self.eta * ((self.data[i][0] - self.alpha[i]/2)/(self.m*(self.d+1)) - self.weight[j]*self.data[i][1][j]/self.m)
                 else:
+                    print "continuing"
+                    continue
                     self.alpha[i] += self.eta * (- self.weight[j]*self.data[i][1][j]/self.m)
-                    self.alpha[i] = 0
+                    self.alpha[i] = 0'''
 
     '''
     dot product of two vectors a and b
@@ -89,41 +117,105 @@ class model():
         ans = 0
         for i in range(self.m):
             for j in range(self.d+1):
-                ans += self.lmbd*w[j]*self.weight[j]/(2*self.m) - a[i]*self.alpha[i]*self.data[i][0]*self.data[i][0]/(4*self.m*(self.d+1)) + a[i]*self.data[i][0]/(self.m*(self.d+1)) - a[i]*w[j]*self.data[i][1][j]/self.m
+                ans += self.lmbd*w[j]*w[j]/(2*self.m) - a[i]*a[i]*self.data[i][0]*self.data[i][0]/(4*self.m*(self.d+1)) + a[i]*self.data[i][0]/(self.m*(self.d+1)) - a[i]*w[j]*self.data[i][1][j]/self.m
         return ans
+
+    def _maximizing_alpha(self, w):
+        a1 = []
+        for i in range(self.m):
+            a1i = 2*(self.data[i][0] - self._dot_product(self.weight, self.data[i][1]))
+            if self.data[i][0]*a1i < 0:
+                a1i = 0
+            a1.append(a1i)
+        return a1
+
+    def _minimizing_weight(self, a):
+        w1 = []
+        for j in range(self.d+1):
+            w1.append(sum([(self.alpha[i]*self.data[i][1][j]) for i in range(self.m)])/(self.lmbd*self.m))
+        return w1
+
 
     '''
     dual gap in convergence analysis on page no 5
     '''
     def dual_gap(self):
-        w1 = []
+        # w1 = []
+        # for j in range(self.d+1):
+        #     w1.append(sum([(self.alpha[i]*self.data[i][1][j]) for i in range(self.m)])/(self.lmbd*self.m))
+        # a1 = []
+        # for i in range(self.m):
+        #     a1i = 2*(self.data[i][0] - self._dot_product(self.weight, self.data[i][1]))
+        #     if self.data[i][0]*a1i < 0:
+        #         a1i = 0
+        #     a1.append(a1i)
+        # print self.weight
+        # print w1
+        print self.f_val(self.weight, self._maximizing_alpha(self.weight)) , self.f_val(self.weight, self.alpha), self.f_val(self._minimizing_weight(self.alpha), self.alpha)
+
+    def print_min_around(self):
+        backup_w = self.weight[:]
+        min_val = self.risk()
+        for i in range(100):
+            new_w = backup_w
+            for j in range(len(new_w)):
+                new_w[j] += (random.random()-0.5)/1000
+            self.weight = new_w
+            min_val = min(min_val, self.risk())
+        self.weight = backup_w
+        return min_val
+
+    def risk_gradient(self):
+        grad = []
         for j in range(self.d+1):
-            w1.append(sum([ (self.alpha[i]*self.data[i][1][j]) for i in range(self.m)])/(self.lmbd*self.m))
-        a1 = []
-        for i in range(self.m):
-            a1.append(self.data[i][0] * max(0, 2*(1 - self._dot_product(self.weight, self.data[i][1]))))
-        #print self.weight
-        #print w1
-        print self.f_val(self.weight, a1) , self.f_val(self.weight, self.alpha), self.f_val(w1, self.alpha)
+            val = self.lmbd*self.weight[j]
+            for i in range(self.m):
+                lin_loss = self.data[i][0]*self._dot_product(self.weight, self.data[i][1])
+                # print lin_loss
+                if lin_loss < 1:
+                    val -= (1.0/self.m)*2*max(0, 1-lin_loss)*self.data[i][0]*self.data[i][1][j]
+            grad.append(val)
+        return grad
 
 
-'''
-main code
-'''
+
+from math import sqrt
+# main code
+
 mdl = model()
 mdl.read_data()
 print mdl.risk()
 print mdl.data[0][1]
 risk = 1
-for i in range(100):
+for i in range(500):
+    #print mdl.data[0][0], mdl.alpha[0], mdl.risk()
     mdl.iterate()
     risk = min(risk, mdl.risk())
-    #mdl.eta = mdl.eta/(i+2)*(i+1)
+    # mdl.eta = mdl.eta/(i+2)*(i+1)
     if i% 10 == 0:
         print mdl.risk(), mdl.eta
-        #mdl.dual_gap()
+        # print mdl.f_val(mdl.weight, mdl.alpha)
+        mdl.dual_gap()
         #print mdl.weight
         #print mdl.alpha[:6]
     #print mdl.alpha
 #print risk
-#print mdl.weight
+print mdl.weight
+print mdl.print_min_around()
+print mdl.risk()
+
+
+def normal_gradient_descent():
+    mdl = model()
+    mdl.read_data()
+    print mdl.risk()
+    for i in range(100):
+        if i % 1 == 0:
+            print mdl.risk()
+        grad = mdl.risk_gradient()
+        # print grad
+        for j in range(mdl.d+1):
+            mdl.weight[j] -= mdl.eta*grad[j]/7
+
+# normal_gradient_descent()
+# min is less than 0.435069393306 0.425756661903 0.418955400011
