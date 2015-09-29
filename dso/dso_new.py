@@ -52,7 +52,7 @@ class model():
         for (i, j) in indices:
             # print i, j
             # print self.alpha[0]
-            if j == self.d+1:
+            if j == self.d:
                 # ignore this
                 self.weight[j] += self.eta*(self.alpha[i]*self.data[i][1][j]/self.m)
             else:
@@ -60,7 +60,7 @@ class model():
             if self.alpha[i] * self.data[i][0] >= 0:
                 # if i == 0:
                 #     print "here", self.eta / (self.m*(self.d+1)), self.weight[j]*self.data[i][1][j]/self.m, (self.data[i][0] - self.alpha[i]/2)/(self.m*(self.d+1)), self.weight[j]*self.data[i][1][j]/self.m
-                self.alpha[i] += self.eta * ((self.data[i][0] - self.alpha[i]/2)*1.0/(self.m*(self.d+1)) - self.weight[j]*self.data[i][1][j]*1.0/self.m)
+                self.alpha[i] += self.eta * ((self.data[i][0] - self.alpha[i]/2.0)*1.0/(self.m*(self.d+1)) - self.weight[j]*self.data[i][1][j]*1.0/self.m)
                 # if i == 0:
                 #     print self.alpha[i]
             else:
@@ -104,7 +104,7 @@ class model():
     '''
     def risk(self):
         risk_val = 0
-        for i in self.weight:#[:-1]:
+        for i in self.weight[:-1]:
             risk_val += self.lmbd*i*i/2
         for i in range(self.m):
             risk_val += self._squared_hinge(self.weight, self.data[i][1], self.data[i][0])/self.m
@@ -151,7 +151,7 @@ class model():
         #     a1.append(a1i)
         # print self.weight
         # print w1
-        print self.f_val(self.weight, self._maximizing_alpha(self.weight)) , self.f_val(self.weight, self.alpha), self.f_val(self._minimizing_weight(self.alpha), self.alpha)
+        print self.f_val(self.weight, self._maximizing_alpha(self.weight)) - self.f_val(self._minimizing_weight(self.alpha), self.alpha)
 
     def print_min_around(self):
         backup_w = self.weight[:]
@@ -184,26 +184,22 @@ from math import sqrt
 
 mdl = model()
 mdl.read_data()
-print mdl.risk()
-print mdl.data[0][1]
+# print mdl.risk()
+# print mdl.data[0][1]
 risk = 1
-for i in range(500):
+for i in range(1000):
     #print mdl.data[0][0], mdl.alpha[0], mdl.risk()
+    if i % 10 == 0:
+        print mdl.risk()
     mdl.iterate()
     risk = min(risk, mdl.risk())
-    # mdl.eta = mdl.eta/(i+2)*(i+1)
-    if i% 10 == 0:
-        print mdl.risk(), mdl.eta
-        # print mdl.f_val(mdl.weight, mdl.alpha)
-        mdl.dual_gap()
-        #print mdl.weight
-        #print mdl.alpha[:6]
     #print mdl.alpha
-#print risk
-print mdl.weight
-print mdl.print_min_around()
-print mdl.risk()
-
+print risk
+# print mdl.weight
+# print mdl.print_min_around()
+# print mdl.risk()
+# mdl.weight = [2.802292389673284, 7.809961395997025, -31.489365639256892]
+# print mdl.risk()
 
 def normal_gradient_descent():
     mdl = model()
@@ -215,7 +211,7 @@ def normal_gradient_descent():
         grad = mdl.risk_gradient()
         # print grad
         for j in range(mdl.d+1):
-            mdl.weight[j] -= mdl.eta*grad[j]/7
+            mdl.weight[j] -= mdl.eta*grad[j]/3
 
 # normal_gradient_descent()
 # min is less than 0.435069393306 0.425756661903 0.418955400011
